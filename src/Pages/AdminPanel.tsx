@@ -161,7 +161,7 @@ const AdminPanel = () => {
               <div className="space-y-6">
                 {menuItems.map((item, index) => (
                   <div key={item.id}>
-                    <div className="bg-white border-2 border-gray-100 p-8 flex items-center gap-6 rounded-2xl shadow-md hover:shadow-lg transition-all hover:border-orange-200">
+                    <div className="bg-white border-2 border-gray-100 p-8 flex flex-col md:flex-row items-center gap-6 rounded-2xl shadow-md hover:shadow-lg transition-all hover:border-orange-200">
                       {/* صورة العنصر */}
                       {item.image && (
                         <div className="flex-shrink-0">
