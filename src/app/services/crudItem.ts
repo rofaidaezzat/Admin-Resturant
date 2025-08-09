@@ -60,7 +60,7 @@ export const ItemApiSlice = createApi({
                 body: body
             }),
             // Optimistic update for better UX
-            async onQueryStarted({ body }, { dispatch, queryFulfilled }) {
+            async onQueryStarted(_, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled;
                     dispatch(
