@@ -106,7 +106,7 @@ updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpda
             patchResult.undo();
         }
     },
-    invalidatesTags: (result, error, { id }) => [
+    invalidatesTags: (_, __, { id }) => [
         { type: 'DashboardItems', id },
         { type: 'DashboardItems', id: 'LIST' }
     ]
@@ -142,7 +142,7 @@ updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpda
                     patchResult.undo();
                 }
             },
-            invalidatesTags: (result, error, id) => [
+            invalidatesTags: (_, __, id) => [
                 { type: 'DashboardItems', id },
                 { type: 'DashboardItems', id: 'LIST' }
             ]
