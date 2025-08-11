@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export interface ITracks {
     row_number: number;
-    id: string; // Make sure this matches your API response (_id vs id)
+    id: string;
     name: string;
     nameAr: string;
     price: number;
@@ -10,6 +10,7 @@ export interface ITracks {
     description: string;
     descriptionAr: string;
     image: string;
+    visible?: boolean; // Added visible field
 }
 
 interface ICreate {
@@ -20,6 +21,7 @@ interface ICreate {
     description: string;
     descriptionAr: string;
     image: string;
+    visible?: boolean;
 }
 
 interface IUpdate extends ICreate {
@@ -32,7 +34,11 @@ export const ItemApiSlice = createApi({
     reducerPath: 'ApiItems',
     tagTypes: ['DashboardItems'],
     baseQuery: fetchBaseQuery({
-        baseUrl: "https://primary-production-d29f0.up.railway.app/"
+        baseUrl: "https://primary-production-d29f0.up.railway.app/",
+        prepareHeaders: (headers) => {
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        },
     }),
     endpoints: (builder) => ({
         // GET - Fetch all items
@@ -40,6 +46,15 @@ export const ItemApiSlice = createApi({
             query: () => ({
                 url: "webhook/get-menu"
             }),
+            transformResponse: (response: any[]): ITracks[] => {
+                console.log("✅ GET API Response:", response);
+                return response.map((item, index) => ({
+                    ...item,
+                    row_number: index + 1,
+                    // Handle both id and _id cases
+                    id: item.id || item._id
+                }));
+            },
             providesTags: (result) =>
                 result
                     ? [
@@ -59,71 +74,82 @@ export const ItemApiSlice = createApi({
                 method: "POST",
                 body: body
             }),
-            // Optimistic update for better UX
             async onQueryStarted(_, { dispatch, queryFulfilled }) {
                 try {
                     const { data } = await queryFulfilled;
+                    console.log("✅ CREATE API Response:", data);
+                    
+                    // Force refresh the entire list after creation
                     dispatch(
-                        ItemApiSlice.util.updateQueryData(
-                            'getDashboardItem',
-                            undefined,
-                            (draft) => {
-                                draft.unshift(data);
-                            }
-                        )
+                        ItemApiSlice.util.invalidateTags([
+                            { type: "DashboardItems", id: "LIST" }
+                        ])
                     );
-                } catch (err) {
-                    console.error("Error in cache update after create:", err);
+                } catch (error) {
+                    console.error("❌ Create failed:", error);
                 }
             },
             invalidatesTags: [{ type: "DashboardItems", id: "LIST" }]
         }),
 
-        // PUT/PATCH - Update existing item
-updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpdate> }>({
-    query: ({ id, body }) => ({
-        url: `webhook/update-menu-item/${id}`,
-        method: "PUT",
-        body: body  // ← This was the issue! You had body: {} instead of body: body
-    }),
-    // Optimistic update
-    async onQueryStarted({ id, body }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-            ItemApiSlice.util.updateQueryData(
-                'getDashboardItem',
-                undefined,
-                (draft) => {
-                    const item = draft.find(item => item.id === id);
-                    if (item) {
-                        Object.assign(item, body);
+        // PUT - Update existing item (Fixed to match Postman URL)
+        updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpdate> }>({
+            query: ({ id, body }) => {
+                console.log("🔍 UPDATE Request:");
+                console.log("📝 ID:", id);
+                console.log("📝 Body:", body);
+                
+                return {
+                    url: "webhook/update-item", // ✅ Fixed URL to match Postman
+                    method: "PUT",
+                    body: { 
+                        id, // Include ID in body as shown in Postman
+                        ...body 
                     }
+                };
+            },
+            async onQueryStarted({ id, body }, { dispatch, queryFulfilled }) {
+                // Optimistic update
+                const patchResult = dispatch(
+                    ItemApiSlice.util.updateQueryData(
+                        'getDashboardItem',
+                        undefined,
+                        (draft) => {
+                            const item = draft.find(item => item.id === id);
+                            if (item) {
+                                Object.assign(item, body);
+                                console.log("✅ Optimistically updated item:", item);
+                            }
+                        }
+                    )
+                );
+                
+                try {
+                    const { data } = await queryFulfilled;
+                    console.log("✅ UPDATE API Response:", data);
+                } catch (error) {
+                    console.error("❌ Update failed, reverting optimistic update:", error);
+                    patchResult.undo();
                 }
-            )
-        );
-        try {
-            await queryFulfilled;
-        } catch {
-            patchResult.undo();
-        }
-    },
-    invalidatesTags: (_, __, { id }) => [
-        { type: 'DashboardItems', id },
-        { type: 'DashboardItems', id: 'LIST' }
-    ]
-}),
+            },
+            invalidatesTags: (_, __, { id }) => [
+                { type: 'DashboardItems', id },
+                { type: 'DashboardItems', id: 'LIST' }
+            ]
+        }),
 
-        // DELETE - Remove item (matches your Postman API)
+        // DELETE - Remove item
         deleteDashboardItem: builder.mutation<{ success: boolean }, string>({
             query: (id) => ({
                 url: "webhook/delete-menu-item",
                 method: "DELETE",
-                body: { id }, // Send ID in body as shown in Postman
+                body: { id },
                 headers: {
                     'Content-Type': 'application/json',
                 }
             }),
-            // Optimistic update
             async onQueryStarted(id, { dispatch, queryFulfilled }) {
+                // Optimistic update
                 const patchResult = dispatch(
                     ItemApiSlice.util.updateQueryData(
                         'getDashboardItem',
@@ -132,13 +158,17 @@ updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpda
                             const index = draft.findIndex(item => item.id === id);
                             if (index !== -1) {
                                 draft.splice(index, 1);
+                                console.log("✅ Optimistically removed item with ID:", id);
                             }
                         }
                     )
                 );
+                
                 try {
-                    await queryFulfilled;
-                } catch {
+                    const { data } = await queryFulfilled;
+                    console.log("✅ DELETE API Response:", data);
+                } catch (error) {
+                    console.error("❌ Delete failed, reverting optimistic update:", error);
                     patchResult.undo();
                 }
             },
@@ -147,7 +177,6 @@ updateDashboardItem: builder.mutation<ITracks, { id: string; body: Partial<IUpda
                 { type: 'DashboardItems', id: 'LIST' }
             ]
         }),
-
     })
 });
 
@@ -156,5 +185,4 @@ export const {
     useCreateDashboardItemMutation,
     useUpdateDashboardItemMutation,
     useDeleteDashboardItemMutation,
-    
 } = ItemApiSlice;

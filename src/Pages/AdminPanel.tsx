@@ -10,6 +10,7 @@ import {
   useDeleteDashboardItemMutation,
 } from "../app/services/crudItem";
 import BusinessSummary from "./BusinessSummary";
+import StockManagement from "./StockManagement";
 
 // Admin Panel Component - GET and DELETE
 const AdminPanel = () => {
@@ -129,6 +130,17 @@ const AdminPanel = () => {
             }`}
           >
             Business Summary
+          </Button>
+          <Button
+            variant={activeTab === "StockManagement" ? "default" : "outline"}
+            onClick={() => setActiveTab("StockManagement")}
+            className={`flex-1 sm:flex-none px-8 py-3 rounded-xl font-semibold transition-all shadow-sm ${
+              activeTab === "StockManagement"
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-orange-200"
+                : "bg-white text-gray-700 border-2 border-gray-200 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"
+            }`}
+          >
+            Stock Management
           </Button>
         </div>
 
@@ -252,8 +264,10 @@ const AdminPanel = () => {
           </Card>
         )}
 
-        {/* Analytics Tab */}
+        {/* BusinessSummary Tab */}
         {activeTab === "analytics" && <BusinessSummary />}
+        {/* StockManagement Tab */}
+        {activeTab === "StockManagement" && <StockManagement />}
       </main>
 
       {/* Edit/Add Item Modal */}
