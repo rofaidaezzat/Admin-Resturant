@@ -1,8 +1,18 @@
 import { CheckCircle, DollarSign, TrendingUp, XCircle } from "lucide-react";
 import { Card } from "../Card";
 
+// Define the type for performance metrics data
+interface PerformanceData {
+  performance?: {
+    averageOrderValue?: number;
+    successRate?: number;
+    cancellationRate?: number;
+    revenueEfficiency?: number;
+  };
+}
+
 // Performance Metrics Component
-const PerformanceMetrics = ({ data }) => {
+const PerformanceMetrics = ({ data }: { data: PerformanceData }) => {
   if (!data) return null;
 
   const performance = data.performance || {};

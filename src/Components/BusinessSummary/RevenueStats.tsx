@@ -9,8 +9,22 @@ import {
 } from "lucide-react";
 import { Card } from "../Card";
 
+// Define the type for revenue stats data
+interface RevenueData {
+  financial?: {
+    grossSales?: number;
+    totalDiscounts?: number;
+    netSales?: number;
+    costOfGoodsSold?: number;
+    grossProfit?: number;
+    netProfit?: number;
+    profitMarginPercent?: number;
+    reportDate?: string;
+  };
+}
+
 // Revenue Stats Component
-const RevenueStats = ({ data }) => {
+const RevenueStats = ({ data }: { data: RevenueData }) => {
   if (!data) return null;
 
   const financial = data.financial || {};
@@ -104,15 +118,13 @@ const RevenueStats = ({ data }) => {
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-rose-50 to-rose-100 hover:shadow-lg transition-all duration-300">
+        <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100 hover:shadow-lg transition-all duration-300">
           <div className="text-center">
-            <XCircle className="h-8 w-8 mx-auto mb-3 text-rose-600" />
+            <XCircle className="h-8 w-8 mx-auto mb-3 text-red-600" />
             <div className="text-2xl font-bold mb-2 text-gray-800">
-              ${financial.cancelledRevenue?.toLocaleString() || "0"}
+              {financial.reportDate || "N/A"}
             </div>
-            <div className="text-rose-600 text-sm font-medium">
-              Cancelled Revenue
-            </div>
+            <div className="text-red-600 text-sm font-medium">Report Date</div>
           </div>
         </Card>
       </div>

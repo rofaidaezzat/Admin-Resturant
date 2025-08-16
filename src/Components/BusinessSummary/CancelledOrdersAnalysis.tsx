@@ -1,8 +1,27 @@
 import { XCircle } from "lucide-react";
 import { Card } from "../Card";
 
+// Define the type for cancelled orders data
+interface CancelledOrdersData {
+  cancelledAnalysis?: {
+    totalCancelledOrders: number;
+    cancelledRevenue: number;
+    cancelledPercentage: number;
+    averageCancelledOrderValue: number;
+    cancelledOrderDetails?: Array<{
+      orderId: string;
+      customerName: string;
+      items: string;
+      createdAt: string;
+      updatedAt: string;
+      totalPrice: number;
+      orderType: string;
+    }>;
+  };
+}
+
 // Cancelled Orders Analysis Component
-const CancelledOrdersAnalysis = ({ data }) => {
+const CancelledOrdersAnalysis = ({ data }: { data: CancelledOrdersData }) => {
   if (!data || !data.cancelledAnalysis) return null;
 
   const cancelled = data.cancelledAnalysis;
@@ -64,7 +83,7 @@ const CancelledOrdersAnalysis = ({ data }) => {
               Recent Cancelled Orders
             </h4>
             <div className="space-y-3">
-              {cancelled.cancelledOrderDetails.map((order, index) => (
+              {cancelled.cancelledOrderDetails.map((order, index: number) => (
                 <div
                   key={index}
                   className="p-4 bg-gray-50 rounded-lg border-l-4 border-red-400"
@@ -101,4 +120,5 @@ const CancelledOrdersAnalysis = ({ data }) => {
     </Card>
   );
 };
+
 export default CancelledOrdersAnalysis;

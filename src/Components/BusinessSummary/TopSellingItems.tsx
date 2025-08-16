@@ -1,8 +1,17 @@
 import { ShoppingCart } from "lucide-react";
 import { Card } from "../Card";
 
+// Define the type for top selling items data
+interface TopSellingItemsData {
+  topSellingItems?: Array<{
+    name: string;
+    quantity: number;
+    revenue: number;
+  }>;
+}
+
 // Top Selling Items Component
-const TopSellingItems = ({ data }) => {
+const TopSellingItems = ({ data }: { data: TopSellingItemsData }) => {
   if (!data || !data.topSellingItems) return null;
 
   const items = data.topSellingItems;
@@ -35,7 +44,7 @@ const TopSellingItems = ({ data }) => {
 
       <div className="p-6">
         <div className="space-y-4">
-          {items.map((item, index) => (
+          {items.map((item, index: number) => (
             <div
               key={index}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-300"
@@ -98,11 +107,10 @@ const TopSellingItems = ({ data }) => {
               </div>
               <div className="text-right ml-4">
                 <div className="text-2xl font-bold text-gray-800">
-                  {item.quantity}
-                </div>
-                <div className="text-xs text-gray-500 mb-1">units sold</div>
-                <div className="text-lg font-semibold text-gray-600">
                   ${item.revenue.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {item.quantity} sold
                 </div>
               </div>
             </div>
@@ -112,4 +120,5 @@ const TopSellingItems = ({ data }) => {
     </Card>
   );
 };
+
 export default TopSellingItems;

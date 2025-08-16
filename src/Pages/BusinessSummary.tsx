@@ -14,11 +14,15 @@ const fetchDashboardData = async () => {
   try {
     const response = await axiosInstance.get("webhook/revenue-summary");
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching dashboard data:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to fetch dashboard data"
-    );
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to fetch dashboard data"
+      );
+    }
+    throw new Error("Failed to fetch dashboard data");
   }
 };
 
@@ -37,7 +41,7 @@ const BusinessSummary = () => {
     queryKey: ["dashboard"],
     queryFn: fetchDashboardData,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     refetchOnWindowFocus: false,
@@ -46,7 +50,7 @@ const BusinessSummary = () => {
 
   const handleRefreshAll = () => {
     refetchDashboard();
-    queryClient.invalidateQueries(["lowStock"]);
+    queryClient.invalidateQueries({ queryKey: ["lowStock"] });
   };
 
   const lastUpdated = new Date(dataUpdatedAt);
@@ -106,7 +110,7 @@ const BusinessSummary = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => queryClient.invalidateQueries(["lowStock"])}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["lowStock"] })}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 flex items-center gap-2"
               >
                 <Package2 className="h-4 w-4" />

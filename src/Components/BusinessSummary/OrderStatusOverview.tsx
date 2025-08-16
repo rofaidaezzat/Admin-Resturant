@@ -9,12 +9,21 @@ import {
 } from "lucide-react";
 import { Card } from "../Card";
 
+// Define the type for order status data
+interface OrderStatusData {
+  orderStatuses?: Record<string, number>;
+}
+
 // Order Status Component
-const OrderStatusOverview = ({ data }) => {
+const OrderStatusOverview = ({ data }: { data: OrderStatusData }) => {
   if (!data || !data.orderStatuses) return null;
 
   const statuses = data.orderStatuses;
-  const statusIcons = {
+  const statusIcons: Record<string, {
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    bg: string;
+  }> = {
     completed: {
       icon: CheckCircle,
       color: "text-green-600",

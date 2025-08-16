@@ -12,17 +12,34 @@ import {
 import { Card } from "../Card";
 import { axiosInstance } from "../../config/axios.config";
 import { useQuery } from "@tanstack/react-query";
-const fetchLowStockData = async () => {
+
+// Define the type for low stock data
+interface LowStockItem {
+  id: string;
+  item: string;
+  status: string;
+  quantity: number;
+  unit: string;
+  minThreshold: number;
+  price: number;
+}
+
+const fetchLowStockData = async (): Promise<LowStockItem> => {
   try {
     const response = await axiosInstance.get("/webhook/low-stock");
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching low-stock data:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to fetch low-stock data"
-    );
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to fetch low-stock data"
+      );
+    }
+    throw new Error("Failed to fetch low-stock data");
   }
 };
+
 // Enhanced Low-Stock Management Component with React Query
 const LowStockManagement = () => {
   const {
@@ -34,12 +51,12 @@ const LowStockManagement = () => {
     queryKey: ["lowStock"],
     queryFn: fetchLowStockData,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     retry: 2,
     retryDelay: 1000,
   });
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "low":
         return "text-red-600 bg-red-100";
@@ -52,7 +69,7 @@ const LowStockManagement = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
       case "low":
         return AlertTriangle;

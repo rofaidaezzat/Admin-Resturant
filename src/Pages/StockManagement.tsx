@@ -107,17 +107,7 @@ const StockManagement = () => {
     setCurrentPage(page);
   };
 
-  const handleAddItem = (newItem: IStock) => {
-    // Fix: Remove null check and handle properly
-    if (newItem && typeof newItem === "object" && newItem.id) {
-      const updatedData = [...inventoryData, newItem];
-      setInventoryData(updatedData);
-      console.log("Added new item:", newItem);
-    } else {
-      console.error("Invalid item received:", newItem);
-      alert("Failed to add item. Please try again.");
-    }
-  };
+
 
   const handleReplenishStock = (replenishList: IReplenishEntry[]) => {
     const updatedData = inventoryData.map((item) => {
@@ -516,7 +506,6 @@ const StockManagement = () => {
         <AddStockModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onSubmit={handleAddItem} // Changed from onAdd to onSubmit
         />
 
         <ReplenishStockModal
