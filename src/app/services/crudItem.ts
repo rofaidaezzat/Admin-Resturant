@@ -34,7 +34,7 @@ export const ItemApiSlice = createApi({
     reducerPath: 'ApiItems',
     tagTypes: ['DashboardItems'],
     baseQuery: fetchBaseQuery({
-        baseUrl: "https://primary-production-d29f0.up.railway.app/",
+        baseUrl: "https://primary-production-c413.up.railway.app/",
         prepareHeaders: (headers) => {
             headers.set('Content-Type', 'application/json');
             return headers;

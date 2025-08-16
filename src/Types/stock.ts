@@ -16,7 +16,7 @@ export interface IApiStockItem {
   id: string;
   Item: string; // API uses 'Item' instead of 'itemName'
   quantity: number;
-  Unit: string; // API uses 'Unit' instead of 'unit'
+  unit: string; // API uses 'Unit' instead of 'unit'
   price: number;
   MinThreshold: number; // API uses 'MinThreshold' instead of 'MinT'
 }
@@ -70,7 +70,7 @@ export const mapApiToStock = (apiItem: IApiStockItem): IStock => ({
   id: apiItem.id,
   itemName: apiItem.Item || "Unknown Item",
   quantity: typeof apiItem.quantity === "number" ? apiItem.quantity : 0,
-  unit: apiItem.Unit || "unit",
+  unit: apiItem.unit || "unit",
   MinT: apiItem.MinThreshold || 0,
   price: apiItem.price || 0,
 });

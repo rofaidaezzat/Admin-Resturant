@@ -3,22 +3,14 @@ import AddStockModal from "../Components/AddStockModal";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/Card";
 import EditStockModal from "../Components/EditStockModal";
 import ReplenishStockModal from "../Components/ReplenishStockModal";
-import DeleteConfirmationModal from "../Components/DeleteConfirmationModal"; // إضافة الـ modal الجديد
+import DeleteConfirmationModal from "../Components/DeleteConfirmationModal";
+import Pagination from "../Components/Pagination";
 import React, { useState } from "react";
 import {
   useDeleteDashboardStockMutation,
   useGetDashboardStockQuery,
 } from "../app/services/crudStock";
-
-// Define interfaces for better type safety
-interface IStock {
-  id: string | number;
-  itemName: string;
-  quantity: number;
-  unit: string;
-  MinT: number;
-  price: number;
-}
+import type { IStock } from "../Types/stock";
 
 interface IReplenishEntry {
   item: IStock;
@@ -28,19 +20,21 @@ interface IReplenishEntry {
 // Define the exact API response interface based on your Postman response
 interface IApiStockItem {
   row_number: number;
-  ID: number;
+  id: number;
   Item: string;
   quantity: number;
   unit: string;
-  price: number;
+  price: number | string; // Price can be string or number from API
   MinThreshold: number;
 }
 
-// Your API response is an array of the above items
-type IStocksResponse = IApiStockItem[];
-
 const StockManagement = () => {
-  const { data: stockData, isLoading } = useGetDashboardStockQuery();
+  // Type the hook response properly
+  const { data: stockData, isLoading } = useGetDashboardStockQuery() as {
+    data: IApiStockItem[] | undefined;
+    isLoading: boolean;
+  };
+
   const [deleteStock, { isLoading: isDeleting }] =
     useDeleteDashboardStockMutation();
 
@@ -54,19 +48,23 @@ const StockManagement = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<IStock | null>(null);
 
-  // إضافة state للـ delete modal
+  // State for delete modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<IStock | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10); // Number of items per page
 
   // Utility function to safely map API response to IStock
   const mapApiResponseToStock = (apiData: IApiStockItem[]): IStock[] => {
     return apiData.map((item: IApiStockItem) => ({
-      id: item.ID,
+      id: String(item.id), // Convert to string to match IStock interface
       itemName: item.Item || "Unknown Item",
       quantity: typeof item.quantity === "number" ? item.quantity : 0,
       unit: item.unit || "unit",
       MinT: item.MinThreshold || 0,
-      price: item.price || 0,
+      price: parseFloat(item.price?.toString() || "0") || 0, // Handle empty strings and convert to number
     }));
   };
 
@@ -94,17 +92,29 @@ const StockManagement = () => {
       );
       setFilteredData(filtered);
     }
+    // Reset to first page when search changes
+    setCurrentPage(1);
   }, [searchTerm, inventoryData]);
 
-  const handleAddItem = (newItem: IStock | null) => {
-    // ✅ Fix: Check if newItem is valid before adding
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentStockItems = filteredData.slice(startIndex, endIndex);
+
+  // Pagination handler
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleAddItem = (newItem: IStock) => {
+    // Fix: Remove null check and handle properly
     if (newItem && typeof newItem === "object" && newItem.id) {
       const updatedData = [...inventoryData, newItem];
       setInventoryData(updatedData);
       console.log("Added new item:", newItem);
     } else {
       console.error("Invalid item received:", newItem);
-      // ✅ Optionally show error message to user
       alert("Failed to add item. Please try again.");
     }
   };
@@ -131,29 +141,35 @@ const StockManagement = () => {
     console.log("Updated item:", updatedItem);
   };
 
-  // تحديث دالة handleDeleteItem لتفتح الـ modal
+  // Update handleDeleteItem function to open modal
   const handleDeleteItem = (item: IStock) => {
     setItemToDelete(item);
     setIsDeleteModalOpen(true);
   };
 
-  // دالة التأكيد على الحذف
+  // Delete confirmation function
   const confirmDelete = async () => {
     if (!itemToDelete) return;
 
     try {
       console.log("🗑️ Attempting to delete item:", itemToDelete.id);
 
-      // جرب الحذف من الـ API
-      const result = await deleteStock(String(itemToDelete.id)).unwrap();
+      // Try to delete from API
+      const result = await deleteStock(itemToDelete.id).unwrap();
 
       console.log("✅ Delete API succeeded:", result);
 
-      // تحديث الـ state المحلي
+      // Update local state
       const updatedData = inventoryData.filter(
         (item) => item.id !== itemToDelete.id
       );
       setInventoryData(updatedData);
+
+      // Reset to first page if current page becomes empty after deletion
+      const newTotalPages = Math.ceil((filteredData.length - 1) / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(1);
+      }
 
       console.log(
         "✅ Item successfully removed from local state:",
@@ -162,8 +178,7 @@ const StockManagement = () => {
     } catch (error) {
       console.error("❌ Delete API failed:", error);
 
-      // بدلاً من إظهار alert، هنعمل الحذف من الـ local state على أي حال
-      // لأن المشكلة ممكن تكون في الـ API بس الحذف شغال فعلاً
+      // Remove from local state anyway in case API has issues but deletion worked
       const updatedData = inventoryData.filter(
         (item) => item.id !== itemToDelete.id
       );
@@ -171,18 +186,18 @@ const StockManagement = () => {
 
       console.log("⚠️ Removed item from local state despite API error");
 
-      // إضافة timeout صغير وبعدين نعمل refetch للتأكد
+      // Add small timeout then refetch to confirm
       setTimeout(() => {
-        // الـ data هتترفش تلقائياً بسبب invalidatesTags
+        // Data will refresh automatically due to invalidatesTags
       }, 1000);
     } finally {
-      // إغلاق الـ modal في جميع الحالات
+      // Close modal in all cases
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     }
   };
 
-  // دالة إلغاء الحذف
+  // Cancel delete function
   const cancelDelete = () => {
     setIsDeleteModalOpen(false);
     setItemToDelete(null);
@@ -211,7 +226,7 @@ const StockManagement = () => {
   };
 
   const calculateStats = () => {
-    // ✅ Fix: Filter out any null/invalid items before calculations
+    // Fix: Filter out any null/invalid items before calculations
     const validItems = inventoryData.filter(
       (item): item is IStock =>
         item !== null &&
@@ -353,7 +368,9 @@ const StockManagement = () => {
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Inventory Overview</CardTitle>
+              <CardTitle>
+                Inventory Overview ({filteredData.length} items)
+              </CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <input
@@ -395,7 +412,7 @@ const StockManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredData
+                  {currentStockItems
                     .filter(
                       (item): item is IStock =>
                         item !== null && item !== undefined && item.id != null
@@ -483,13 +500,23 @@ const StockManagement = () => {
               )}
             </div>
           </CardContent>
+
+          {/* Pagination Component - only show if there are items and more than one page */}
+          {filteredData.length > 0 && totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              className="border-t border-gray-100"
+            />
+          )}
         </Card>
 
         {/* Modals */}
         <AddStockModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={handleAddItem}
+          onSubmit={handleAddItem} // Changed from onAdd to onSubmit
         />
 
         <ReplenishStockModal
@@ -506,7 +533,7 @@ const StockManagement = () => {
           onEdit={handleEditItem}
         />
 
-        {/* إضافة الـ Delete Confirmation Modal */}
+        {/* Delete Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}
           itemName={itemToDelete?.itemName || ""}

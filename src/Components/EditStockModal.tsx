@@ -55,6 +55,9 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
 
   React.useEffect(() => {
     if (item) {
+      // 🔧 DEBUGGING: Log what we receive
+      console.log("🔍 Received item in useEffect:", item);
+
       setFormData({
         itemName: item.itemName || "",
         quantity: item.quantity?.toString() || "0",
@@ -100,24 +103,38 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
     e.preventDefault();
     if (!validateForm() || !item) return;
 
+    // 🔧 DEBUGGING: Log the item object to see what we're working with
+    console.log("🔍 Item object in EditStockModal:", item);
+    console.log("🔍 Item ID:", item.id, "Type:", typeof item.id);
+
+    // ✅ Handle undefined ID case
+    if (!item.id || item.id === "undefined") {
+      console.error("❌ Item ID is missing or undefined:", item);
+      alert("Error: Item ID is missing. Cannot update this item.");
+      return;
+    }
+
     try {
       // ✅ Ensure id is string
-      const itemId = typeof item.id === "string" ? item.id : String(item.id);
+      const itemId = String(item.id);
 
+      // 🔧 FIXED: Send data in the format your API expects
       const result = await updateStock({
         id: itemId,
         body: {
-          itemName: formData.itemName,
+          itemName: formData.itemName, // API expects "itemName"
           quantity: parseInt(formData.quantity),
+          unit: formData.unit, // API expects "unit"
           price: parseFloat(formData.price),
-          unit: formData.unit,
-          MinT: parseInt(formData.MinT),
+          MinT: parseInt(formData.MinT), // API expects "MinT"
         },
       });
 
-      // ✅ Construct the updated item with proper typing
+      console.log("✅ Update API Response:", result);
+
+      // ✅ Construct the updated item for immediate UI update
       const updatedItem: IStock = {
-        id: itemId, // ✅ Ensure it's a string
+        id: itemId,
         itemName: formData.itemName,
         quantity: parseInt(formData.quantity),
         price: parseFloat(formData.price),
@@ -125,25 +142,37 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
         MinT: parseInt(formData.MinT),
       };
 
-      // ✅ Use result data if available and valid, otherwise use constructed item
-      if (result.data && typeof result.data === "object" && result.data.id) {
+      // 🔧 IMPROVED: Handle API response properly
+      if (result.data && typeof result.data === "object") {
+        // If API returns updated data, use it with proper field mapping
+        const apiData = result.data as any;
         const responseItem: IStock = {
-          id: String(result.data.id), // ✅ Ensure string
-          itemName: result.data.Item || formData.itemName, // ✅ Map API response
-          quantity: result.data.quantity || parseInt(formData.quantity),
-          price: result.data.price || parseFloat(formData.price),
-          unit: result.data.Unit || formData.unit, // ✅ Map API response
-          MinT: result.data.MinThreshold || parseInt(formData.MinT), // ✅ Map API response
+          id: String(apiData.id || itemId),
+          itemName: apiData.itemName || apiData.Item || formData.itemName,
+          quantity: apiData.quantity || parseInt(formData.quantity),
+          price: apiData.price || parseFloat(formData.price),
+          unit: apiData.unit || formData.unit,
+          MinT: apiData.MinT || apiData.MinThreshold || parseInt(formData.MinT),
         };
         onEdit(responseItem);
       } else {
+        // Use constructed item if API doesn't return data
         onEdit(updatedItem);
       }
 
       onClose();
-    } catch (error) {
-      console.error("Error updating stock:", error);
-      alert("Failed to update item. Please try again.");
+    } catch (error: any) {
+      console.error("❌ Error updating stock:", error);
+
+      // 🔧 IMPROVED: Better error handling
+      let errorMessage = "Failed to update item. Please try again.";
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     }
   };
 

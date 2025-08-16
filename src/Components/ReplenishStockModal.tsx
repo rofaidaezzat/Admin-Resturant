@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUpdateDashboardStockMutation } from "../app/services/crudStock";
+import { useUpdateDashboardQuantityMutation } from "../app/services/crudStock";
 import { ChevronDown, Package, Plus, X } from "lucide-react";
 import type { IReplenishEntry, IStock } from "../Types/stock";
 
@@ -16,7 +16,7 @@ const ReplenishStockModal = ({
   availableItems,
   onReplenish,
 }: ReplenishStockModalProps) => {
-  const [updateStock, { isLoading }] = useUpdateDashboardStockMutation();
+  const [updateStock, { isLoading }] = useUpdateDashboardQuantityMutation();
   const [selectedItem, setSelectedItem] = useState<IStock | null>(null);
   const [quantityToAdd, setQuantityToAdd] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

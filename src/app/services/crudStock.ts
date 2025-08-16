@@ -4,8 +4,8 @@ export interface IStocks {
     id: string; 
     Item: string;
     quantity: number;
-    Unit: string;
-    price: number;
+    unit: string;
+    price: number | string; // Allow price to be string or number since API returns strings
     MinThreshold: number;
 }
 
@@ -26,12 +26,16 @@ interface IUpdate {
 }
 
 export type IStocksResponse = IStocks[];
+ interface IQuantityUpdate {
+    id: string;
+    quantity: number;
+ }
 
 export const StockApiSlice = createApi({
     reducerPath: 'ApiStocks',
     tagTypes: ['DashboardItems'],
     baseQuery: fetchBaseQuery({
-        baseUrl: "https://primary-production-d29f0.up.railway.app/",
+        baseUrl: "https://primary-production-c413.up.railway.app/",
         prepareHeaders: (headers) => {
             headers.set('Content-Type', 'application/json');
             return headers;
@@ -43,6 +47,17 @@ export const StockApiSlice = createApi({
             query: () => ({
                 url: "webhook/get-stock"
             }),
+            // Transform response to handle price field properly
+            transformResponse: (response: any[]): IStocksResponse => {
+                return response.map((item: any) => ({
+                    id: String(item.id),
+                    Item: item.Item || "Unknown Item",
+                    quantity: typeof item.quantity === "number" ? item.quantity : 0,
+                    unit: item.unit || "unit", 
+                    price: parseFloat(item.price?.toString() || "0") || 0, // Convert empty strings to 0
+                    MinThreshold: item.MinThreshold || 0
+                }));
+            },
             providesTags: (result) => {
                 if (!result || !Array.isArray(result)) {
                     return [{ type: 'DashboardItems', id: 'LIST' }];
@@ -89,10 +104,10 @@ export const StockApiSlice = createApi({
         // PUT - Update existing item
         updateDashboardStock: builder.mutation<IStocks, { id: string; body: Partial<IUpdate> }>({
             query: ({ id, body }) => ({
-                url: `webhook/update-stock`,
-                method: "PUT",
-                body: { id, ...body },
-            }),
+    url: "webhook/update-stock",
+    method: "PUT",
+    body: { ...body, id }, // Corrected to match API's flat structure
+}),
             invalidatesTags: (_, __, { id }) => [
                 { type: 'DashboardItems', id },
                 { type: 'DashboardItems', id: 'LIST' }
@@ -134,6 +149,18 @@ export const StockApiSlice = createApi({
                 { type: 'DashboardItems', id: 'LIST' }
             ]
         }),
+        // PUT - Update quantity of an existing stock item
+        updateDashboardQuantity: builder.mutation<IQuantityUpdate, { id: string; body: Partial<IUpdate> }>({
+            query: ({ id, body }) => ({
+                url: `webhook/add-quantity`,
+                method: "PUT",
+                body: { id, ...body },
+            }),
+            invalidatesTags: (_, __, { id }) => [
+                { type: 'DashboardItems', id },
+                { type: 'DashboardItems', id: 'LIST' }
+            ]
+        }),
         // Helper to manually refetch data
         refetchDashboardStock: builder.mutation<void, void>({
             queryFn: async (_, { dispatch }) => {
@@ -150,4 +177,5 @@ export const {
     useUpdateDashboardStockMutation,
     useDeleteDashboardStockMutation,
     useRefetchDashboardStockMutation,
+    useUpdateDashboardQuantityMutation
 } = StockApiSlice;

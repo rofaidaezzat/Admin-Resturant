@@ -11,6 +11,7 @@ import {
 } from "../app/services/crudItem";
 import BusinessSummary from "./BusinessSummary";
 import StockManagement from "./StockManagement";
+import Pagination from "../Components/Pagination";
 
 // Admin Panel Component - GET and DELETE
 const AdminPanel = () => {
@@ -26,8 +27,23 @@ const AdminPanel = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10); // Number of items per page
+
   // Use API data if available, otherwise empty array
   const menuItems = apiMenuItems || [];
+
+  // Pagination calculations
+  const totalPages = Math.ceil(menuItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentMenuItems = menuItems.slice(startIndex, endIndex);
+
+  // Pagination handler
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleSaveItem = () => {
     // Modal will handle the save operation
@@ -50,6 +66,12 @@ const AdminPanel = () => {
       // Success - the cache will be automatically updated
       setShowDeleteModal(false);
       setItemToDelete(null);
+
+      // Reset to first page if current page becomes empty after deletion
+      const newTotalPages = Math.ceil((menuItems.length - 1) / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(1);
+      }
     } catch (error) {
       console.error("Failed to delete item:", error);
       alert("Failed to delete item. Please try again.");
@@ -171,7 +193,7 @@ const AdminPanel = () => {
               )}
 
               <div className="space-y-6">
-                {menuItems.map((item, index) => (
+                {currentMenuItems.map((item, index) => (
                   <div key={item.id}>
                     <div className="bg-white border-2 border-gray-100 p-8 flex flex-col md:flex-row items-center gap-6 rounded-2xl shadow-md hover:shadow-lg transition-all hover:border-orange-200">
                       {/* صورة العنصر */}
@@ -254,13 +276,23 @@ const AdminPanel = () => {
                       </div>
                     </div>
                     {/* Separator line between items */}
-                    {index !== menuItems.length - 1 && (
+                    {index !== currentMenuItems.length - 1 && (
                       <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent my-6" />
                     )}
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Pagination Component - only show if there are items and more than one page */}
+            {menuItems.length > 0 && totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                className="border-t border-gray-100"
+              />
+            )}
           </Card>
         )}
 
